@@ -85,12 +85,35 @@ function M.get_path_parts(typed_path)
   return nil, nil
 end
 
+function table.filter(t, filterIter)
+  local out = {}
+  for k, v in pairs(t) do
+    if filterIter(v, k, t) then out[k] = v end
+  end
+  return out
+end
+
+function is_wsl()
+  local f = io.popen("uname -r")
+  local uname = f:read("*a")
+  f:close()
+  return uname:find("WSL") ~= nil
+end
+
+local wsl = is_wsl()
+
+
 local term_exec_options = {
   --- Suggests commands
   ---@param typed_cmd string|nil
   cmd = function(typed_cmd)
     local paths = vim.split(vim.env.PATH, ":")
     local commands = {}
+    if wsl then
+      paths = table.filter(paths, function(path)
+        return path:sub(1, 4) ~= "/mnt"
+      end)
+    end
 
     for _, path in ipairs(paths) do
       local glob_str = path .. "/" .. (typed_cmd or "") .. "*"
